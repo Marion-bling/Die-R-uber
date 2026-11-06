@@ -428,6 +428,162 @@
   }
 
   /* ======================================================================
+     3b) HANDLUNGSMATRIX „Wer tut was – wann?“ (antippen statt ziehen)
+     ====================================================================== */
+  var M_FIG = [
+    { id: "karl", name: "Karl" }, { id: "franz", name: "Franz" },
+    { id: "vater", name: "Der alte Moor" }, { id: "amalia", name: "Amalia" },
+    { id: "spiegelberg", name: "Spiegelberg" }, { id: "hermann", name: "Hermann" }
+  ];
+  var M_AKTE = ["I", "II", "III", "IV", "V"];
+  var M_KARTEN = [
+    { t: "erhält einen Brief, in dem ihn der Vater angeblich verstößt", z: "karl-1" },
+    { t: "wird Hauptmann einer Räuberbande", z: "karl-1" },
+    { t: "befreit Roller vom Galgen – dabei brennt die Stadt", z: "karl-2" },
+    { t: "nimmt Kosinsky auf und beschließt heimzukehren", z: "karl-3" },
+    { t: "kommt verkleidet als „Graf von Brand“ ins Schloss", z: "karl-4" },
+    { t: "tötet Amalia und stellt sich der Justiz", z: "karl-5" },
+    { t: "liest dem Vater einen Brief mit schlimmen Nachrichten über Karl vor", z: "franz-1" },
+    { t: "will den Vater durch einen Schock töten und wird Herr im Schloss", z: "franz-2" },
+    { t: "bedrängt Amalia im Garten und wird mit dem Degen vertrieben", z: "franz-3" },
+    { t: "wird misstrauisch gegenüber dem fremden Grafen und plant einen Mord", z: "franz-4" },
+    { t: "wird von einem Albtraum gequält und nimmt sich das Leben", z: "franz-5" },
+    { t: "verstößt seinen Sohn Karl", z: "vater-1" },
+    { t: "bricht bei der Nachricht von Karls Tod zusammen und gilt als tot", z: "vater-2" },
+    { t: "wird halb verhungert aus einem Turm befreit", z: "vater-4" },
+    { t: "erfährt, wer der Räuberhauptmann ist, und stirbt", z: "vater-5" },
+    { t: "weist Franz zurück und hält zu Karl", z: "amalia-1" },
+    { t: "erfährt, dass Karl und der Vater noch leben", z: "amalia-3" },
+    { t: "erkennt Karl nicht, als er als Fremder vor ihr steht", z: "amalia-4" },
+    { t: "will nicht ohne Karl leben und stirbt durch seine Hand", z: "amalia-5" },
+    { t: "hat die Idee, eine Räuberbande zu gründen", z: "spiegelberg-1" },
+    { t: "will Karl ermorden und wird von Schweizer getötet", z: "spiegelberg-4" },
+    { t: "überbringt verkleidet die falsche Nachricht von Karls Tod", z: "hermann-2" },
+    { t: "versorgt den eingesperrten alten Moor heimlich mit Essen", z: "hermann-4" }
+  ];
+
+  var matrixBox = $("#matrix");
+  if (matrixBox) {
+    var gewaehlt = null;
+    var leiste = el("div", { class: "matrix-leiste" });
+    var btnPruefen = el("button", { type: "button", class: "btn" }, "Prüfen");
+    var btnNeu = el("button", { type: "button", class: "btn sekundaer" }, "Neu starten");
+    var btnModus = el("button", { type: "button", class: "btn sekundaer", "aria-pressed": "false" }, "Ohne Kärtchen (Erweiterung)");
+    var btnLoesung = el("button", { type: "button", class: "btn sekundaer", hidden: "" }, "Lösung einblenden");
+    [btnPruefen, btnNeu, btnModus, btnLoesung].forEach(function (b) { leiste.appendChild(b); });
+    var status = el("p", { class: "matrix-status", "aria-live": "polite" });
+    var stapel = el("div", { class: "matrix-stapel", role: "group", "aria-label": "Stapel mit Ereigniskärtchen – antippen, um es zurückzulegen" });
+    var wrap = el("div", { class: "tabelle-wrap matrix-wrap" });
+    var tab = el("table", { class: "matrix-tabelle" });
+    var kopf = "<thead><tr><th scope='col'>Figur</th>" + M_AKTE.map(function (a) { return "<th scope='col'>" + a + ". Akt</th>"; }).join("") + "</tr></thead>";
+    tab.innerHTML = kopf + "<tbody></tbody>";
+    var zellen = {};
+    M_FIG.forEach(function (f) {
+      var tr = el("tr");
+      tr.appendChild(el("th", { scope: "row" }, f.name));
+      M_AKTE.forEach(function (a, i) {
+        var id = f.id + "-" + (i + 1);
+        var td = el("td");
+        var feld = el("div", { class: "matrix-feld", tabindex: "0", role: "button", "aria-label": f.name + ", " + a + ". Akt – Kärtchen hier ablegen", "data-zelle": id });
+        var notiz = el("textarea", { class: "matrix-notiz", "aria-label": "Notiz: " + f.name + ", " + a + ". Akt", rows: "3" });
+        var loes = el("div", { class: "matrix-loesung" });
+        loes.textContent = M_KARTEN.filter(function (k) { return k.z === id; }).map(function (k) { return k.t; }).join(" · ") || "–";
+        td.appendChild(feld); td.appendChild(notiz); td.appendChild(loes);
+        tr.appendChild(td);
+        zellen[id] = feld;
+      });
+      tab.tBodies[0].appendChild(tr);
+    });
+    wrap.appendChild(tab);
+    matrixBox.appendChild(leiste);
+    matrixBox.appendChild(status);
+    matrixBox.appendChild(stapel);
+    matrixBox.appendChild(wrap);
+
+    function waehle(karte) {
+      if (gewaehlt) { gewaehlt.classList.remove("gewaehlt"); gewaehlt.setAttribute("aria-pressed", "false"); }
+      if (karte === gewaehlt || !karte) { gewaehlt = null; matrixBox.classList.remove("hat-auswahl"); return; }
+      gewaehlt = karte;
+      karte.classList.add("gewaehlt"); karte.setAttribute("aria-pressed", "true");
+      matrixBox.classList.add("hat-auswahl");
+    }
+    function ablegen(ziel) {
+      if (!gewaehlt) return;
+      var k = gewaehlt;
+      waehle(null);
+      k.classList.remove("richtig", "falsch");
+      ziel.appendChild(k);
+      zaehle();
+    }
+    function zaehle() {
+      var rest = stapel.querySelectorAll(".matrix-karte").length;
+      status.textContent = rest ? "Noch " + rest + " Kärtchen im Stapel." : "Alle Kärtchen sind verteilt – jetzt „Prüfen“!";
+    }
+    function mischen(a) {
+      for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+      return a;
+    }
+    function aufbauen() {
+      waehle(null);
+      stapel.innerHTML = "";
+      Object.keys(zellen).forEach(function (z) { zellen[z].innerHTML = ""; });
+      mischen(M_KARTEN.slice()).forEach(function (k) {
+        var b = el("button", { type: "button", class: "matrix-karte", "aria-pressed": "false", "data-ziel": k.z }, k.t);
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var feld = b.parentNode;
+          // Ist schon ein anderes Kärtchen gewählt und wird ein Kärtchen in einem Feld angetippt,
+          // gilt das als Antippen dieses Feldes.
+          if (gewaehlt && gewaehlt !== b && feld.classList.contains("matrix-feld")) { ablegen(feld); return; }
+          waehle(b);
+        });
+        stapel.appendChild(b);
+      });
+      zaehle();
+    }
+    Object.keys(zellen).forEach(function (z) {
+      var f = zellen[z];
+      f.addEventListener("click", function () { ablegen(f); });
+      f.addEventListener("keydown", function (e) {
+        if (e.target === f && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); ablegen(f); }
+      });
+    });
+    stapel.addEventListener("click", function (e) { if (e.target === stapel) ablegen(stapel); });
+
+    btnPruefen.addEventListener("click", function () {
+      var r = 0, f = 0;
+      Object.keys(zellen).forEach(function (z) {
+        $$(".matrix-karte", zellen[z]).forEach(function (k) {
+          var ok = k.getAttribute("data-ziel") === z;
+          k.classList.toggle("richtig", ok); k.classList.toggle("falsch", !ok);
+          if (ok) r++; else f++;
+        });
+      });
+      var rest = stapel.querySelectorAll(".matrix-karte").length;
+      status.textContent = r + " richtig, " + f + " falsch" + (rest ? ", " + rest + " noch im Stapel." : ".") +
+        (r === M_KARTEN.length ? " Perfekt – alles richtig!" : f ? " Rote Kärtchen antippen und neu ablegen." : "");
+    });
+    btnNeu.addEventListener("click", aufbauen);
+    btnModus.addEventListener("click", function () {
+      var an = !matrixBox.classList.contains("ohne-karten");
+      matrixBox.classList.toggle("ohne-karten", an);
+      matrixBox.classList.remove("zeige-loesung");
+      btnModus.setAttribute("aria-pressed", an ? "true" : "false");
+      btnModus.textContent = an ? "Mit Kärtchen (Basis)" : "Ohne Kärtchen (Erweiterung)";
+      btnLoesung.hidden = !an; btnPruefen.hidden = an;
+      btnLoesung.textContent = "Lösung einblenden";
+      waehle(null);
+      status.textContent = an ? "Schreibt in jedes Feld, was die Figur in diesem Akt tut. Leere Felder sind erlaubt." : "";
+      if (!an) zaehle();
+    });
+    btnLoesung.addEventListener("click", function () {
+      var an = matrixBox.classList.toggle("zeige-loesung");
+      btnLoesung.textContent = an ? "Lösung ausblenden" : "Lösung einblenden";
+    });
+    aufbauen();
+  }
+
+  /* ======================================================================
      4) CHECKLISTE DIALOGANALYSE (nur im Arbeitsspeicher, kein Speichern)
      ====================================================================== */
   $$(".checkliste").forEach(function (liste) {

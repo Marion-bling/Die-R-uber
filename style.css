@@ -596,3 +596,40 @@ html.puzzle-zieht, html.puzzle-zieht * { cursor: grabbing !important; }
 .sperre-form label { font-weight: 600; }
 .sperre-form input { flex: 1 1 10rem; width: auto; }
 .sperre-meldung { min-height: 1.4em; color: var(--siegel); margin: .5rem auto 0; }
+
+/* Handlungsmatrix (DS 2) */
+.matrix-leiste { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0 .4rem; }
+.matrix-status { font-weight: 600; min-height: 1.4rem; margin: .3rem 0 .6rem; }
+.matrix-stapel {
+  display: flex; flex-wrap: wrap; gap: .45rem; padding: .7rem; min-height: 3.2rem;
+  background: var(--papier-dunkel); border: 2px dashed var(--rand); border-radius: var(--radius); margin-bottom: 1rem;
+}
+.matrix.hat-auswahl .matrix-stapel { border-color: var(--gold); }
+.matrix-karte {
+  font: inherit; font-size: .86rem; line-height: 1.3; text-align: left; cursor: pointer;
+  background: #fff; color: var(--tinte); border: 1px solid var(--wald-200); border-left: 4px solid var(--wald-600);
+  border-radius: 6px; padding: .45rem .6rem; max-width: 17rem; touch-action: manipulation;
+}
+.matrix-karte.gewaehlt { background: var(--gold-hell); border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold); }
+.matrix-karte.richtig { background: #dff1e3; border-left-color: #2f7a45; }
+.matrix-karte.falsch { background: var(--siegel-hell); border-left-color: var(--siegel); }
+.matrix-feld .matrix-karte { max-width: none; width: 100%; font-size: .8rem; margin-bottom: .3rem; }
+.matrix-tabelle { min-width: 46rem; table-layout: fixed; }
+.matrix-tabelle th[scope="row"] { width: 7.5rem; background: var(--papier-dunkel); }
+.matrix-tabelle td { padding: .3rem; }
+.matrix-feld {
+  min-height: 4.5rem; border: 2px dashed transparent; border-radius: 6px; padding: .25rem; cursor: pointer;
+  touch-action: manipulation;
+}
+.matrix.hat-auswahl .matrix-feld { border-color: var(--gold); background: #fffaf0; }
+.matrix-notiz, .matrix-loesung { display: none; }
+.matrix.ohne-karten .matrix-stapel, .matrix.ohne-karten .matrix-feld { display: none; }
+.matrix.ohne-karten .matrix-notiz {
+  display: block; width: 100%; font: inherit; font-size: .82rem; border: 1px solid var(--rand);
+  border-radius: 6px; padding: .3rem; resize: vertical; background: #fffef9;
+}
+.matrix.ohne-karten.zeige-loesung .matrix-loesung {
+  display: block; font-size: .78rem; margin-top: .3rem; padding: .3rem; border-radius: 6px;
+  background: #dff1e3; color: #1f4f30;
+}
+.matrix-leiste [hidden] { display: none; }
