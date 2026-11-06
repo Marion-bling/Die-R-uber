@@ -633,3 +633,73 @@ html.puzzle-zieht, html.puzzle-zieht * { cursor: grabbing !important; }
   background: #dff1e3; color: #1f4f30;
 }
 .matrix-leiste [hidden] { display: none; }
+
+/* Gruppen-Auslosung (DS 2) */
+.los-box { background: var(--blau-hell); border: 2px solid var(--blau); border-radius: var(--radius); padding: 1rem 1.1rem; margin: 1rem 0 1.4rem; }
+.los-box h3 { margin-top: 0; }
+.los-s-form { display: flex; flex-wrap: wrap; gap: .5rem .7rem; align-items: center; }
+.los-s-form label { font-weight: 600; }
+.los-s-form input, .los-s-form select {
+  font: inherit; font-size: 1.15rem; padding: .45rem .6rem; border: 2px solid var(--wald-600); border-radius: 8px; background: #fff;
+}
+#los-s-code, #los-wieder-code { width: 9.5rem; text-transform: uppercase; letter-spacing: .12em; font-family: var(--mono); }
+#los-s-code[aria-invalid="true"] { border-color: var(--siegel); }
+.los-s-ergebnis {
+  margin-top: 1rem; background: #fff; border-radius: var(--radius); padding: 1rem 1.2rem;
+  border: 3px solid var(--gf, var(--wald-600)); box-shadow: var(--schatten);
+}
+.los-s-ergebnis.los-fehler { border-color: var(--siegel); background: var(--siegel-hell); }
+.los-s-klein { margin: .2rem 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--tinte-hell); }
+.los-s-gross { margin: .1rem 0 .4rem; font-family: var(--serif); font-size: 1.6rem; color: var(--gf); display: flex; align-items: center; gap: .5rem; }
+.los-s-mittel { margin: .1rem 0 .2rem; font-family: var(--serif); font-size: 1.25rem; }
+.los-abzeichen {
+  display: inline-grid; place-items: center; flex: none; width: 1.7em; height: 1.7em; border-radius: 50%;
+  color: #fff; font-family: var(--sans); font-weight: 700; font-size: .8em; margin-right: .35em;
+}
+.los-einstellungen { display: grid; gap: 1rem; background: #fff; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--schatten); }
+.los-feld input[type=number] { font: inherit; font-size: 1.2rem; width: 5rem; padding: .35rem .5rem; border: 2px solid var(--wald-600); border-radius: 8px; margin-left: .5rem; }
+.los-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.los-chip {
+  font: inherit; font-weight: 600; min-width: 2.6rem; height: 2.6rem; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--wald-200); background: var(--wald-100); color: var(--wald-800); touch-action: manipulation;
+}
+.los-chip[aria-pressed="true"] { background: var(--siegel); border-color: var(--siegel); color: #fff; text-decoration: line-through; }
+.los-hinweis { margin: .5rem 0 0; color: var(--tinte-hell); font-weight: 600; }
+.los-start { font-size: 1.25rem; padding: .7rem 1.6rem; }
+.los-code {
+  text-align: center; margin: 1.4rem 0 1rem; padding: 1rem; border-radius: var(--radius);
+  background: var(--wald-800); color: #fff;
+}
+.los-code-label { margin: 0; text-transform: uppercase; letter-spacing: .14em; font-size: .85rem; color: var(--gold-hell); }
+.los-code-wert { margin: .2rem 0; font-family: var(--mono); font-size: clamp(2.6rem, 9vw, 5rem); font-weight: 700; letter-spacing: .14em; line-height: 1.1; }
+.los-code-weg { margin: 0 auto; font-size: .95rem; opacity: .9; }
+.los-ansicht { display: flex; gap: .5rem; margin: .5rem 0; }
+.los-ansicht [aria-pressed="true"] { background: var(--wald-700); color: #fff; }
+.los-ansicht [hidden] { display: none; }
+.los-ergebnis { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); margin: .8rem 0 1.2rem; }
+.los-gruppe { background: #fff; border: 1px solid var(--rand); border-top: 8px solid var(--gf, var(--wald-600)); border-radius: var(--radius); padding: .6rem .8rem .8rem; box-shadow: var(--schatten); }
+.los-gruppe h3 { margin: 0 0 .4rem; font-size: 1.1rem; display: flex; align-items: center; color: var(--gf, var(--wald-800)); }
+.los-stammgruppe { border-top-color: var(--gold); }
+.los-stammgruppe h3 { color: var(--wald-800); }
+.los-gruppe ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.los-person { display: flex; align-items: center; gap: .2rem; flex-wrap: wrap; background: var(--papier); border-radius: 6px; padding: .3rem .5rem; font-size: 1.05rem; }
+.los-nr { font-weight: 700; color: var(--tinte-hell); }
+.los-stamm-hinweis { margin-left: auto; font-size: .75rem; color: var(--tinte-hell); }
+.los-versteckt { opacity: 0; transform: scale(.6); }
+.los-plopp { animation: losPlopp .35s ease-out; }
+@keyframes losPlopp { 0% { opacity: 0; transform: scale(.6); } 70% { opacity: 1; transform: scale(1.06); } 100% { transform: scale(1); } }
+.los-trommel { grid-column: 1 / -1; display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+.los-trommel span {
+  display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 50%;
+  background: var(--siegel); color: #fff; font-size: 1.8rem; font-weight: 700; font-family: var(--mono);
+  animation: losWackeln .25s infinite alternate;
+}
+.los-trommel span:nth-child(2) { background: var(--wald-600); animation-delay: .08s; }
+.los-trommel span:nth-child(3) { background: var(--gold); animation-delay: .16s; }
+@keyframes losWackeln { from { transform: rotate(-8deg) translateY(0); } to { transform: rotate(8deg) translateY(-6px); } }
+.los-trommel-text { grid-column: 1 / -1; text-align: center; font-family: var(--serif); font-style: italic; font-size: 1.2rem; }
+@media (prefers-reduced-motion: reduce) { .los-plopp, .los-trommel span { animation: none; } }
+@media print {
+  .los-code { background: none; color: #000; border: 2px solid #000; }
+  .los-gruppe { break-inside: avoid; box-shadow: none; }
+}

@@ -602,6 +602,291 @@
   });
 
   /* ======================================================================
+     4b) GRUPPEN-AUSLOSUNG (DS 2, Gruppenpuzzle)
+     Die Lehrkraft lost am Beamer aus (gruppen.html). Das Ergebnis steckt
+     vollständig in einer kurzen Losnummer. Jedes Tablet rechnet mit
+     Losnummer + Klassenlisten-Nummer dieselbe Einteilung nach – ohne Server,
+     ohne Namen im Netz.
+     ====================================================================== */
+  var LOS_GRUPPEN = [
+    { nr: 1, name: "Karl Moor", kurz: "Karl", farbe: "#335545", anker: "Gruppe 1" },
+    { nr: 2, name: "Franz Moor", kurz: "Franz", farbe: "#9e2a2b", anker: "Gruppe 2" },
+    { nr: 3, name: "Der alte Moor", kurz: "Vater", farbe: "#8a6416", anker: "Gruppe 3" },
+    { nr: 4, name: "Amalia", kurz: "Amalia", farbe: "#8e3b63", anker: "Gruppe 4" },
+    { nr: 5, name: "Spiegelberg", kurz: "Spiegelberg", farbe: "#24527a", anker: "Gruppe 5" },
+    { nr: 6, name: "Die Bande", kurz: "Bande", farbe: "#4b4f57", anker: "Gruppe 6" }
+  ];
+  // Reihenfolge, in der Gruppen bei ungerader Verteilung eine Person mehr bekommen
+  var LOS_EXTRA = [0, 1, 3, 2, 5, 4];
+  var LOS_ZEICHEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // ohne I, O, 0, 1
+  var STAMM_NAMEN = "ABCDEFGHIJ";
+
+  function zufallsgenerator(saat) { // mulberry32
+    var a = saat >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function zuBits(zahl, laenge) { var s = zahl.toString(2); while (s.length < laenge) s = "0" + s; return s; }
+  function pruefsumme(bits) {
+    var h = 7;
+    for (var i = 0; i < bits.length; i++) h = (h * 31 + (bits.charAt(i) === "1" ? 17 : 3) + i) % 65521;
+    return h % 16;
+  }
+  function losKodieren(saat, anzahl, fehlend) {
+    var bits = zuBits(saat, 10) + zuBits(anzahl - 1, 5) + (fehlend.length ? "1" : "0");
+    if (fehlend.length) for (var i = 1; i <= anzahl; i++) bits += fehlend.indexOf(i) > -1 ? "1" : "0";
+    bits = zuBits(pruefsumme(bits), 4) + bits;
+    while (bits.length % 5) bits += "0";
+    var code = "";
+    for (var j = 0; j < bits.length; j += 5) code += LOS_ZEICHEN.charAt(parseInt(bits.substr(j, 5), 2));
+    return code.length > 4 ? code.replace(/(.{4})(?=.)/g, "$1-") : code;
+  }
+  function losDekodieren(eingabe) {
+    var code = String(eingabe || "").toUpperCase().replace(/[\s\-–.]/g, "");
+    if (code.length < 4) return null;
+    var bits = "";
+    for (var i = 0; i < code.length; i++) {
+      var w = LOS_ZEICHEN.indexOf(code.charAt(i));
+      if (w < 0) return null;
+      bits += zuBits(w, 5);
+    }
+    var pruef = parseInt(bits.substr(0, 4), 2);
+    var saat = parseInt(bits.substr(4, 10), 2);
+    var anzahl = parseInt(bits.substr(14, 5), 2) + 1;
+    var mitFehlend = bits.charAt(19) === "1";
+    var nutz = bits.substr(4, 16);
+    var fehlend = [];
+    if (mitFehlend) {
+      var maske = bits.substr(20, anzahl);
+      if (maske.length < anzahl) return null;
+      nutz += maske;
+      for (var k = 0; k < anzahl; k++) if (maske.charAt(k) === "1") fehlend.push(k + 1);
+      if (code.length !== Math.ceil((20 + anzahl) / 5)) return null;
+    } else if (code.length !== 4) return null;
+    if (pruefsumme(nutz) !== pruef) return null;
+    return { saat: saat, anzahl: anzahl, fehlend: fehlend };
+  }
+  function losEinteilen(saat, anzahl, fehlend) {
+    var zufall = zufallsgenerator(saat * 2654435761 + 12345);
+    var da = [];
+    for (var i = 1; i <= anzahl; i++) if (fehlend.indexOf(i) < 0) da.push(i);
+    for (var j = da.length - 1; j > 0; j--) { var r = Math.floor(zufall() * (j + 1)); var t = da[j]; da[j] = da[r]; da[r] = t; }
+    var basis = Math.floor(da.length / 6), rest = da.length % 6;
+    var groessen = [basis, basis, basis, basis, basis, basis];
+    for (var e = 0; e < rest; e++) groessen[LOS_EXTRA[e]]++;
+    var gruppen = [], pos = 0;
+    groessen.forEach(function (g) { gruppen.push(da.slice(pos, pos + g)); pos += g; });
+    // Stammgruppen: aus jeder Expertengruppe eine Person; Überzählige reihum verteilen
+    var anzahlStamm = Math.max(1, Math.min.apply(null, groessen));
+    var stamm = [], zuordnung = {}, reihum = 0;
+    for (var s = 0; s < anzahlStamm; s++) stamm.push([]);
+    gruppen.forEach(function (mitglieder, gi) {
+      mitglieder.forEach(function (nr, mi) {
+        var si = mi < anzahlStamm ? mi : (reihum++ % anzahlStamm);
+        stamm[si].push({ nr: nr, gruppe: gi });
+        zuordnung[nr] = { gruppe: gi, stamm: si };
+      });
+    });
+    return { gruppen: gruppen, stamm: stamm, zuordnung: zuordnung, anwesend: da.length };
+  }
+  function gruppeAbzeichen(g) {
+    return "<span class='los-abzeichen' style='background:" + g.farbe + "' aria-hidden='true'>" + g.nr + "</span>";
+  }
+  var ohneAnimation = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- Lehrkraft: Auslosen am Beamer ---------- */
+  var losLK = $("#los-lehrkraft");
+  if (losLK) {
+    var eAnzahl = $("#los-anzahl", losLK);
+    var chipBox = $("#los-fehlend", losLK);
+    var eNamen = $("#los-namen", losLK);
+    var ergebnisBox = $("#los-ergebnis", losLK);
+    var codeBox = $("#los-code", losLK);
+    var hinweisBox = $("#los-hinweis", losLK);
+    var fehlendListe = [];
+    var aktuell = null, ansicht = "experten";
+
+    function baueChips() {
+      var n = Math.max(6, Math.min(32, parseInt(eAnzahl.value, 10) || 20));
+      fehlendListe = fehlendListe.filter(function (x) { return x <= n; });
+      chipBox.innerHTML = "";
+      for (var i = 1; i <= n; i++) {
+        (function (nr) {
+          var b = el("button", { type: "button", class: "los-chip", "aria-pressed": fehlendListe.indexOf(nr) > -1 ? "true" : "false", title: "Nr. " + nr + " fehlt heute" }, String(nr));
+          b.addEventListener("click", function () {
+            var idx = fehlendListe.indexOf(nr);
+            if (idx > -1) fehlendListe.splice(idx, 1); else fehlendListe.push(nr);
+            b.setAttribute("aria-pressed", idx > -1 ? "false" : "true");
+            zeigeHinweis();
+          });
+          chipBox.appendChild(b);
+        })(i);
+      }
+      zeigeHinweis();
+    }
+    function zeigeHinweis() {
+      var n = Math.max(6, Math.min(32, parseInt(eAnzahl.value, 10) || 20));
+      var da = n - fehlendListe.length;
+      var basis = Math.floor(da / 6), rest = da % 6;
+      hinweisBox.textContent = da < 6
+        ? "Für sechs Gruppen braucht es mindestens sechs Anwesende."
+        : da + " anwesend → " + (rest ? rest + " Gruppe" + (rest > 1 ? "n" : "") + " mit " + (basis + 1) + ", " + (6 - rest) + " mit " + basis : "alle Gruppen mit " + basis) + " Personen · " + Math.max(1, basis) + " Stammgruppen";
+    }
+    function namen() {
+      var zeilen = (eNamen && eNamen.value || "").split(/\n/);
+      return function (nr) {
+        var n = (zeilen[nr - 1] || "").trim();
+        return n ? "<span class='los-nr'>" + nr + "</span> " + n.replace(/[<>&]/g, "") : "<span class='los-nr'>Nr.</span> " + nr;
+      };
+    }
+    function zeichne(animiert) {
+      if (!aktuell) return;
+      var e = aktuell.einteilung, nameVon = namen();
+      ergebnisBox.innerHTML = "";
+      ergebnisBox.className = "los-ergebnis los-" + ansicht;
+      var karten = [];
+      if (ansicht === "experten") {
+        e.gruppen.forEach(function (mitglieder, gi) {
+          var g = LOS_GRUPPEN[gi];
+          var box = el("section", { class: "los-gruppe", style: "--gf:" + g.farbe });
+          box.innerHTML = "<h3>" + gruppeAbzeichen(g) + "Gruppe " + g.nr + " · " + g.name + "</h3><ul></ul>";
+          var ul = $("ul", box);
+          mitglieder.forEach(function (nr) {
+            var li = el("li", { class: "los-person" }, nameVon(nr) + " <span class='los-stamm-hinweis'>Stammgr. " + STAMM_NAMEN.charAt(e.zuordnung[nr].stamm) + "</span>");
+            ul.appendChild(li); karten.push(li);
+          });
+          ergebnisBox.appendChild(box);
+        });
+      } else {
+        e.stamm.forEach(function (mitglieder, si) {
+          var box = el("section", { class: "los-gruppe los-stammgruppe" });
+          box.innerHTML = "<h3>Stammgruppe " + STAMM_NAMEN.charAt(si) + "</h3><ul></ul>";
+          var ul = $("ul", box);
+          mitglieder.slice().sort(function (a, b) { return a.gruppe - b.gruppe; }).forEach(function (m) {
+            var g = LOS_GRUPPEN[m.gruppe];
+            var li = el("li", { class: "los-person" }, gruppeAbzeichen(g) + nameVon(m.nr) + " <span class='los-stamm-hinweis'>" + g.kurz + "</span>");
+            ul.appendChild(li); karten.push(li);
+          });
+          ergebnisBox.appendChild(box);
+        });
+      }
+      if (animiert && !ohneAnimation) {
+        karten.forEach(function (k, i) {
+          k.classList.add("los-versteckt");
+          setTimeout(function () { k.classList.remove("los-versteckt"); k.classList.add("los-plopp"); }, 140 * i);
+        });
+        return 140 * karten.length;
+      }
+      return 0;
+    }
+    function zeigeCode(code) {
+      codeBox.hidden = false;
+      $(".los-code-wert", codeBox).textContent = code;
+      $$("[data-los-ansicht]", losLK).forEach(function (b) { b.hidden = false; });
+    }
+    function trommel(fertig) {
+      if (ohneAnimation) { fertig(); return; }
+      var n = Math.max(6, Math.min(32, parseInt(eAnzahl.value, 10) || 20));
+      ergebnisBox.className = "los-ergebnis";
+      ergebnisBox.innerHTML = "<div class='los-trommel' aria-hidden='true'><span></span><span></span><span></span></div><p class='los-trommel-text'>Die Lostrommel dreht sich …</p>";
+      var spans = $$(".los-trommel span", ergebnisBox), t = 0;
+      var iv = setInterval(function () {
+        spans.forEach(function (s) { s.textContent = 1 + Math.floor(Math.random() * n); });
+        if (++t > 14) { clearInterval(iv); fertig(); }
+      }, 85);
+    }
+    function auslosen() {
+      var n = Math.max(6, Math.min(32, parseInt(eAnzahl.value, 10) || 20));
+      eAnzahl.value = n;
+      if (n - fehlendListe.length < 6) { zeigeHinweis(); return; }
+      var saat = Math.floor(Math.random() * 1024);
+      var fehlend = fehlendListe.slice().sort(function (a, b) { return a - b; });
+      aktuell = { code: losKodieren(saat, n, fehlend), einteilung: losEinteilen(saat, n, fehlend) };
+      codeBox.hidden = true;
+      ansicht = "experten"; setzeAnsichtKnoepfe();
+      trommel(function () {
+        var dauer = zeichne(true);
+        setTimeout(function () { zeigeCode(aktuell.code); }, dauer + 200);
+      });
+    }
+    function setzeAnsichtKnoepfe() {
+      $$("[data-los-ansicht]", losLK).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-los-ansicht") === ansicht ? "true" : "false"); });
+    }
+    eAnzahl.addEventListener("input", baueChips);
+    $("#los-start", losLK).addEventListener("click", auslosen);
+    $$("[data-los-ansicht]", losLK).forEach(function (b) {
+      b.addEventListener("click", function () { ansicht = b.getAttribute("data-los-ansicht"); setzeAnsichtKnoepfe(); zeichne(false); });
+    });
+    if (eNamen) eNamen.addEventListener("input", function () { zeichne(false); });
+    var wiederForm = $("#los-wieder", losLK);
+    if (wiederForm) wiederForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var d = losDekodieren($("input", wiederForm).value);
+      var meldung = $(".los-meldung", wiederForm);
+      if (!d) { meldung.textContent = "Diese Losnummer ist ungültig."; return; }
+      meldung.textContent = "";
+      eAnzahl.value = d.anzahl; fehlendListe = d.fehlend.slice(); baueChips();
+      aktuell = { code: losKodieren(d.saat, d.anzahl, d.fehlend), einteilung: losEinteilen(d.saat, d.anzahl, d.fehlend) };
+      ansicht = "experten"; setzeAnsichtKnoepfe(); zeichne(false); zeigeCode(aktuell.code);
+    });
+    baueChips();
+  }
+
+  /* ---------- Schüler:in: Meine Gruppe finden ---------- */
+  var losSuS = $("#los-schueler");
+  if (losSuS) {
+    var fCode = $("#los-s-code", losSuS), fNr = $("#los-s-nr", losSuS), aus = $("#los-s-ergebnis", losSuS);
+    var formS = $("form", losSuS);
+    function nrAuswahl(anzahl) {
+      var alt = fNr.value;
+      fNr.innerHTML = "<option value=''>– wählen –</option>";
+      for (var i = 1; i <= anzahl; i++) fNr.appendChild(el("option", { value: String(i) }, String(i)));
+      if (alt && Number(alt) <= anzahl) fNr.value = alt;
+    }
+    fCode.addEventListener("input", function () {
+      var d = losDekodieren(fCode.value);
+      fCode.setAttribute("aria-invalid", d || fCode.value.trim().length < 4 ? "false" : "true");
+      nrAuswahl(d ? d.anzahl : 32);
+    });
+    formS.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var d = losDekodieren(fCode.value);
+      aus.hidden = false;
+      if (!d) { aus.className = "los-s-ergebnis los-fehler"; aus.innerHTML = "<p>Die Losnummer stimmt nicht. Schau noch einmal an den Beamer: Es gibt kein I, O, 0 oder 1.</p>"; return; }
+      var nr = parseInt(fNr.value, 10);
+      if (!nr) { aus.className = "los-s-ergebnis los-fehler"; aus.innerHTML = "<p>Wähle deine Nummer aus der Klassenliste.</p>"; return; }
+      if (nr > d.anzahl) { aus.className = "los-s-ergebnis los-fehler"; aus.innerHTML = "<p>Diese Nummer gibt es bei dieser Auslosung nicht.</p>"; return; }
+      if (d.fehlend.indexOf(nr) > -1) { aus.className = "los-s-ergebnis los-fehler"; aus.innerHTML = "<p>Nr. " + nr + " ist heute als fehlend eingetragen. Melde dich bei deiner Lehrkraft.</p>"; return; }
+      var e = losEinteilen(d.saat, d.anzahl, d.fehlend), z = e.zuordnung[nr], g = LOS_GRUPPEN[z.gruppe];
+      var mit = e.gruppen[z.gruppe].filter(function (x) { return x !== nr; });
+      var stammMit = e.stamm[z.stamm].filter(function (m) { return m.nr !== nr; })
+        .sort(function (a, b) { return a.gruppe - b.gruppe; })
+        .map(function (m) { return "Nr. " + m.nr + " (" + LOS_GRUPPEN[m.gruppe].kurz + ")"; });
+      aus.className = "los-s-ergebnis";
+      aus.style.setProperty("--gf", g.farbe);
+      aus.innerHTML =
+        "<p class='los-s-klein'>Deine Expertengruppe</p>" +
+        "<p class='los-s-gross'>" + gruppeAbzeichen(g) + "Gruppe " + g.nr + " · " + g.name + "</p>" +
+        "<p>Du arbeitest zusammen mit " + (mit.length ? mit.map(function (x) { return "Nr. " + x; }).join(", ") : "–") + ".</p>" +
+        "<p class='los-s-klein'>Danach in deiner Stammgruppe</p>" +
+        "<p class='los-s-mittel'>Stammgruppe " + STAMM_NAMEN.charAt(z.stamm) + "</p>" +
+        "<p>mit " + stammMit.join(", ") + ".</p>" +
+        "<p><button type='button' class='btn los-s-los'>Zu den Textausschnitten von Gruppe " + g.nr + " →</button></p>";
+      $(".los-s-los", aus).addEventListener("click", function () {
+        var ziel = $$("details > summary").filter(function (s) { return s.textContent.indexOf(g.anker + " ·") === 0; })[0];
+        if (ziel) { ziel.parentNode.open = true; ziel.scrollIntoView({ behavior: ohneAnimation ? "auto" : "smooth", block: "start" }); ziel.focus(); }
+      });
+      if (!ohneAnimation) { aus.classList.remove("los-plopp"); void aus.offsetWidth; aus.classList.add("los-plopp"); }
+    });
+    nrAuswahl(32);
+  }
+
+  /* ======================================================================
      5) GLOSSAR: Suche & Filter
      ====================================================================== */
   var suche = $("#glossar-suche");
