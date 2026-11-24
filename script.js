@@ -37,9 +37,18 @@
      Die Lehrkraft-Inhalte stehen verschlüsselt in <script id="lk-daten">.
      Mit dem Codewort wird ein Schlüssel abgeleitet (PBKDF2-SHA256, 250 000 Runden),
      damit werden die Inhalte entschlüsselt (AES-256-GCM) und eingesetzt.
-     Der Schlüssel (nicht das Codewort) bleibt nur bis zum Schließen des Browsers
-     in sessionStorage auf diesem Gerät. */
+     Der Schlüssel (nicht das Codewort) bleibt höchstens 30 Minuten in sessionStorage
+     auf diesem Gerät, danach wird automatisch abgemeldet. Nach dem Entsperren bleibt
+     die Lehrkraft-Ansicht aus, bis sie über den Schalter eingeschaltet wird. */
   var LK_SALT = "raeuber-lernwebsite-lk-v1", LK_ITER = 250000, LK_KEY = "raeuber-lk-schluessel";
+  var LK_ZEIT_KEY = "raeuber-lk-seit", LK_DAUER = 30 * 60 * 1000;
+  var lkTimer = null;
+  function lkZeitpunkt() { try { return Number(window.sessionStorage.getItem(LK_ZEIT_KEY)) || 0; } catch (e) { return 0; } }
+  function lkAblaufPlanen() {
+    clearTimeout(lkTimer);
+    var rest = lkZeitpunkt() + LK_DAUER - Date.now();
+    lkTimer = setTimeout(lkAbmelden, Math.max(0, rest));
+  }
   var lkBtn = $(".lk-toggle");
   var lkOffen = false;
   function b64zuBytes(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
@@ -84,7 +93,7 @@
     document.dispatchEvent(new CustomEvent("lk-entsperrt"));
   }
   function lkAbmelden() {
-    try { window.sessionStorage.removeItem(LK_KEY); } catch (e) {}
+    try { window.sessionStorage.removeItem(LK_KEY); window.sessionStorage.removeItem(LK_ZEIT_KEY); } catch (e) {}
     speicher("raeuber-lk", "0");
     location.reload();
   }
@@ -97,8 +106,13 @@
   // gespeicherter Schlüssel aus dieser Browsersitzung?
   (function () {
     var gespeichert = speicherHole(LK_KEY);
+    if (gespeichert && Date.now() - lkZeitpunkt() > LK_DAUER) {
+      try { window.sessionStorage.removeItem(LK_KEY); window.sessionStorage.removeItem(LK_ZEIT_KEY); } catch (e) {}
+      speicher("raeuber-lk", "0");
+      gespeichert = null;
+    }
     if (gespeichert && kryptoDa()) {
-      lkMitSchluessel(b64zuBytes(gespeichert), speicher("raeuber-lk") !== "0").catch(function () {
+      lkMitSchluessel(b64zuBytes(gespeichert), speicher("raeuber-lk") === "1").then(lkAblaufPlanen).catch(function () {
         try { window.sessionStorage.removeItem(LK_KEY); } catch (e) {}
       });
     }
@@ -112,34 +126,44 @@
       if (lkOffen) { lkAbmelden(); return; }
       var dlg = el("div", { "class": "lk-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "lk-dialog-titel" });
       dlg.innerHTML =
-        '<form class="lk-dialog-box">' +
+        '<div class="lk-dialog-box">' +
           '<h2 id="lk-dialog-titel">Lehrkraft-Zugang</h2>' +
           '<label for="lk-code">Codewort</label>' +
-          '<input id="lk-code" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">' +
+          // bewusst kein Passwortfeld und kein Formular: Browser sollen das Codewort nicht speichern
+          '<input id="lk-code" type="text" class="lk-verdeckt" name="lk-' + Date.now() + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other">' +
           '<p class="lk-dialog-meldung" aria-live="polite"></p>' +
-          '<div class="lk-dialog-knoepfe"><button type="submit" class="btn">Öffnen</button>' +
+          '<p class="lk-dialog-info">Die Freischaltung endet nach 30 Minuten oder mit „Lehrkraft-Zugang abmelden“. Die Lehrkraft-Ansicht schaltest du danach oben rechts ein.</p>' +
+          '<div class="lk-dialog-knoepfe"><button type="button" class="btn lk-oeffnen">Öffnen</button>' +
           '<button type="button" class="btn sekundaer lk-abbrechen">Abbrechen</button></div>' +
-        "</form>";
+        "</div>";
       document.body.appendChild(dlg);
       var input = $("#lk-code", dlg), meldung = $(".lk-dialog-meldung", dlg);
       input.focus();
       function zu() { dlg.remove(); loginBtn.focus(); }
       $(".lk-abbrechen", dlg).addEventListener("click", zu);
-      dlg.addEventListener("keydown", function (e) { if (e.key === "Escape") zu(); });
-      $("form", dlg).addEventListener("submit", function (e) {
-        e.preventDefault();
+      dlg.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") zu();
+        if (e.key === "Enter" && e.target === input) { e.preventDefault(); pruefe(); }
+      });
+      $(".lk-oeffnen", dlg).addEventListener("click", pruefe);
+      function pruefe() {
         if (!kryptoDa()) { meldung.textContent = "Dieser Browser unterstützt die Entschlüsselung nicht."; return; }
         meldung.textContent = "Wird geprüft …";
         leiteSchluesselAb(input.value.trim()).then(function (roh) {
-          return lkMitSchluessel(roh, true).then(function () {
-            try { window.sessionStorage.setItem(LK_KEY, bytesZuB64(roh)); } catch (e2) {}
+          return lkMitSchluessel(roh, false).then(function () {
+            input.value = "";
+            try {
+              window.sessionStorage.setItem(LK_KEY, bytesZuB64(roh));
+              window.sessionStorage.setItem(LK_ZEIT_KEY, String(Date.now()));
+            } catch (e2) {}
+            lkAblaufPlanen();
             zu();
           });
         }).catch(function () {
           meldung.textContent = "Das Codewort stimmt nicht.";
           input.select();
         });
-      });
+      }
     });
   }
 

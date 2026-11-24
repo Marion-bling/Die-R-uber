@@ -703,3 +703,7 @@ html.puzzle-zieht, html.puzzle-zieht * { cursor: grabbing !important; }
   .los-code { background: none; color: #000; border: 2px solid #000; }
   .los-gruppe { break-inside: avoid; box-shadow: none; }
 }
+
+/* Codewort-Feld ohne Passwortspeicherung: Zeichen verdeckt darstellen */
+.lk-verdeckt { -webkit-text-security: disc; text-security: disc; }
+.lk-dialog-info { font-size: .82rem; color: var(--tinte-hell); }

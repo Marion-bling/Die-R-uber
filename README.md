@@ -63,7 +63,8 @@ Alle Stellen sind auf der Website sichtbar markiert:
 ## Lehrkraft-Ansicht und Lösungen
 
 - Verlaufspläne, Erwartungshorizonte, Lösungen und Hinweise (alle Elemente mit `class="lk"`) sind **verschlüsselt** (AES-256-GCM, Schlüssel per PBKDF2 aus dem Lehrkraft-Codewort). Im Quelltext steht nur verschlüsselter Text in `<script id="lk-daten">`.
-- Öffnen: unten auf jeder Seite **„Lehrkraft-Zugang“** antippen und das Codewort eingeben. Die Freischaltung gilt bis zum Schließen des Browsers; der Schalter oben rechts blendet die Lehrkraft-Teile danach ein und aus.
+- Öffnen: unten auf jeder Seite **„Lehrkraft-Zugang“** antippen und das Codewort eingeben. Danach erscheint oben rechts der Schalter **„Lehrkraft-Ansicht“**; erst damit werden die Lehrkraft-Teile eingeblendet (so erscheint am Beamer nichts aus Versehen).
+- Die Freischaltung endet automatisch nach **30 Minuten** oder sofort mit „Lehrkraft-Zugang abmelden“. Das Codewort-Feld ist so gebaut, dass Browser nicht anbieten, es als Passwort zu speichern – trotzdem auf fremden Geräten (Beamer-PC, Schüler-Tablets) möglichst nicht entsperren.
 - Das Codewort ist nirgends in diesem Repository gespeichert. Ohne Codewort lassen sich die Lehrkraft-Teile nicht wiederherstellen – Sicherungskopie aufbewahren!
 - **Bearbeiten** der Lehrkraft-Teile: `python3 werkzeuge/lk_schutz.py entsperren` (Codewort eingeben), HTML ändern, dann `python3 werkzeuge/lk_schutz.py sperren` und erst danach hochladen. Niemals entsperrte Dateien hochladen.
 - Freischalt-Sperre für die Klasse: Die Figurenkonstellation in DS 2 ist gesperrt, bis die Klasse den Code eingibt, den die Lehrkraft nennt. Das Tablet merkt sich die Freischaltung. Mit Lehrkraft-Zugang ist die Konstellation immer offen.
