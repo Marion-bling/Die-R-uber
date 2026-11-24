@@ -707,3 +707,71 @@ html.puzzle-zieht, html.puzzle-zieht * { cursor: grabbing !important; }
 /* Codewort-Feld ohne Passwortspeicherung: Zeichen verdeckt darstellen */
 .lk-verdeckt { -webkit-text-security: disc; text-security: disc; }
 .lk-dialog-info { font-size: .82rem; color: var(--tinte-hell); }
+
+/* Ergänzung Dramenaufbau (DS 4) */
+.pyr-wrap { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1rem; align-items: start; margin: .8rem 0; }
+@media (max-width: 860px) { .pyr-wrap { grid-template-columns: 1fr; } }
+.pyr-svg { width: 100%; height: auto; background: #fff; border: 1px solid var(--rand); border-radius: var(--radius); }
+.pyr-teil { cursor: pointer; }
+.pyr-teil:focus { outline: none; }
+.pyr-teil polygon { fill: var(--wald-100); stroke: #fff; stroke-width: 3; transition: fill .15s; }
+.pyr-gipfel polygon { fill: var(--wald-200); }
+.pyr-ende polygon { fill: var(--siegel-hell); }
+.pyr-teil:hover polygon, .pyr-teil:focus polygon, .pyr-teil.aktiv polygon { fill: var(--gold-hell); stroke: var(--gold); }
+.pyr-linie { fill: none; stroke: var(--siegel); stroke-width: 4; stroke-linejoin: round; pointer-events: none; }
+.pyr-lab { font-family: var(--sans); font-size: 15px; font-weight: 700; fill: var(--wald-800); pointer-events: none; }
+.pyr-akt { font-family: var(--serif); font-size: 16px; font-weight: 700; fill: var(--tinte); pointer-events: none; }
+.pyr-zeit { font-family: var(--sans); font-size: 12px; fill: var(--tinte-hell); }
+.pyr-moment circle { fill: var(--gold); stroke: #fff; stroke-width: 3; }
+.pyr-moment text { font-family: var(--sans); font-weight: 700; font-size: 15px; fill: #fff; pointer-events: none; }
+.pyr-moment .pyr-mlab { fill: #6d4b0b; font-size: 13px; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.pyr-moment:hover circle, .pyr-moment:focus circle, .pyr-moment.aktiv circle { fill: var(--siegel); }
+.pyr-info { position: sticky; top: 1rem; }
+.pyr-info h4 { margin: 0 0 .4rem; }
+.pyr-akt-info { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--siegel); font-weight: 700; }
+.pyr-frage { color: var(--wald-700); }
+dl.pyr-liste dt { font-weight: 700; margin-top: .5rem; }
+dl.pyr-liste dd { margin: .1rem 0 0; }
+.da-tabelle td, .da-tabelle th { font-size: .9rem; }
+
+/* Zuordnung in Pyramidenform */
+.pyr-zonen { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .4rem; align-items: start; }
+.pyr-zone { min-width: 0; overflow-wrap: anywhere; hyphens: auto; margin-top: calc(var(--stufe) * 1.8rem); background: var(--papier-dunkel); border-radius: 8px; padding: .3rem; border-top: 5px solid var(--wald-600); }
+.pyr-zone-erregend, .pyr-zone-retardierend { border-top-color: var(--gold); }
+.pyr-zone-hoehepunkt { border-top-color: var(--siegel); }
+.pyr-zone-titel { margin: 0 0 .25rem; font-size: .78rem; font-weight: 700; text-align: center; line-height: 1.2; min-height: 2em; }
+.pyr-zone .matrix-feld { min-height: 6rem; background: #fff; }
+.pyr-stelle { font-weight: 700; }
+@media (max-width: 900px) {
+  .pyr-zonen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pyr-zone { margin-top: 0; }
+}
+
+/* Gegenüberstellung */
+.da-zeilen { display: grid; gap: .5rem; }
+.da-zeile {
+  display: grid; grid-template-columns: 7rem auto minmax(0, 1fr); gap: .4rem .7rem; align-items: center;
+  background: #fff; border: 1px solid var(--rand); border-left: 5px solid var(--rand); border-radius: 8px; padding: .5rem .7rem;
+}
+.da-zeile.ok { border-left-color: #2f7a45; }
+.da-zeile.nein { border-left-color: var(--siegel); }
+.da-merkmal { margin: 0; font-weight: 700; font-family: var(--serif); }
+.da-wahl { display: flex; gap: .3rem; }
+.da-btn {
+  font: inherit; font-size: .85rem; padding: .35rem .6rem; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+  border: 2px solid var(--wald-600); background: #fff; color: var(--wald-700); white-space: nowrap;
+}
+.da-btn[data-w="o"] { border-color: var(--blau); color: var(--blau); }
+.da-btn[aria-pressed="true"] { background: var(--wald-600); color: #fff; }
+.da-btn[data-w="o"][aria-pressed="true"] { background: var(--blau); color: #fff; }
+.da-beleg { width: 100%; font: inherit; font-size: .88rem; border: 1px solid var(--rand); border-radius: 6px; padding: .3rem .45rem; resize: vertical; background: #fffef9; }
+.da-rueck { grid-column: 1 / -1; margin: 0; font-size: .88rem; }
+.da-zeile.ok .da-rueck { color: #22603a; }
+.da-zeile.nein .da-rueck { color: var(--siegel); }
+.da-rueck:empty { display: none; }
+@media (max-width: 760px) { .da-zeile { grid-template-columns: 1fr; } }
+.da-waage { display: flex; height: 2.4rem; border-radius: 8px; overflow: hidden; margin: .5rem 0; font-weight: 700; color: #fff; font-size: .9rem; }
+.da-waage > div { display: grid; place-items: center; }
+.da-waage-g { background: var(--wald-600); }
+.da-waage-o { background: var(--blau); }
+@media print { .pyr-info { display: none; } .pyr-wrap { display: block; } details.pyr-text-alternative > .inhalt { display: block !important; } }

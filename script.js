@@ -608,6 +608,200 @@
   }
 
   /* ======================================================================
+     3c) DRAMENAUFBAU (DS 4, Ergänzung): Pyramide, Zuordnung, Gegenüberstellung
+     ====================================================================== */
+  var PYR_INFO = {
+    exposition: { t: "Exposition", akt: "I. Akt", x: "Das Publikum lernt Ort, Zeit, die Hauptfiguren und ihre Vorgeschichte kennen. Der Grundkonflikt wird sichtbar, ist aber noch nicht ausgebrochen.", f: "Wer ist wer – und wo liegt das Problem?" },
+    erregend: { t: "Erregendes Moment", akt: "Übergang I. → II. Akt", x: "Ein Ereignis setzt den Konflikt in Gang. Ab jetzt gibt es kein Zurück mehr.", f: "Was bringt den Stein ins Rollen?" },
+    steigend: { t: "Steigende Handlung", akt: "II. Akt", x: "Der Konflikt verschärft sich. Die Gegenspieler handeln, Pläne und Intrigen laufen an, die Spannung steigt.", f: "Wie spitzt sich die Lage zu?" },
+    hoehepunkt: { t: "Höhepunkt und Peripetie", akt: "III. Akt", x: "Der Konflikt erreicht seinen Höhepunkt. Dann kommt der Wendepunkt (griechisch peripéteia = Umschwung): Das Schicksal der Hauptfigur wendet sich – in der Tragödie zum Schlechten.", f: "Wo kippt die Handlung?" },
+    fallend: { t: "Fallende Handlung", akt: "IV. Akt", x: "Die Folgen der Wende entfalten sich. Die Handlung läuft unaufhaltsam auf das Ende zu.", f: "Welche Folgen hat die Wende?" },
+    retardierend: { t: "Retardierendes Moment", akt: "vor der Katastrophe", x: "Die Handlung wird kurz verzögert (lateinisch retardare = verzögern): Für einen Moment scheint doch noch eine glückliche Lösung möglich. Das steigert die Spannung vor dem Ende.", f: "Gibt es noch Hoffnung?" },
+    katastrophe: { t: "Katastrophe", akt: "V. Akt", x: "Der Konflikt wird endgültig gelöst – in der Tragödie durch den Untergang der Hauptfigur (griechisch katastrophé = Wendung, Umsturz).", f: "Wie endet der Konflikt?" }
+  };
+  var pyrSvg = $("#pyramide");
+  if (pyrSvg) {
+    var pyrInfo = $("#pyr-info");
+    $$(".pyr-teil", pyrSvg).forEach(function (g) {
+      var id = g.getAttribute("data-id"), d = PYR_INFO[id];
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute("aria-label", d.t + ", " + d.akt);
+      function zeige() {
+        $$(".pyr-teil", pyrSvg).forEach(function (x) { x.classList.toggle("aktiv", x === g); });
+        pyrInfo.innerHTML = "<p class='pyr-akt-info'>" + d.akt + "</p><h4>" + d.t + "</h4><p>" + d.x + "</p><p class='pyr-frage'>Leitfrage: <em>" + d.f + "</em></p>";
+      }
+      g.addEventListener("click", zeige);
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); zeige(); } });
+    });
+  }
+
+  /* --- Aufgabe 1: Räuber-Ereignisse den Phasen zuordnen (antippen statt ziehen) --- */
+  var PYR_PHASEN = [
+    { id: "exposition", t: "Exposition" }, { id: "erregend", t: "Erregendes Moment" },
+    { id: "steigend", t: "Steigende Handlung" }, { id: "hoehepunkt", t: "Höhepunkt / Peripetie" },
+    { id: "fallend", t: "Fallende Handlung" }, { id: "retardierend", t: "Retardierendes Moment" },
+    { id: "katastrophe", t: "Katastrophe" }
+  ];
+  var PYR_KARTEN = [
+    { t: "Franz klagt über seine Benachteiligung und schmiedet Pläne; Karl schimpft in der Schenke über sein Zeitalter", z: "exposition", s: "I,1–2" },
+    { t: "Karl erhält den gefälschten Brief des Vaters und wird Hauptmann der Räuberbande", z: "erregend", s: "I,2" },
+    { t: "Ein falscher Bote meldet Karls Tod; der alte Moor bricht zusammen", z: "steigend", s: "II,2" },
+    { t: "Die Räuber befreien Roller, die Stadt brennt; die Bande schwört Karl erneut Treue", z: "steigend", s: "II,3" },
+    { t: "Karl sehnt sich an der Donau nach seiner verlorenen Unschuld; Kosinskys Geschichte bewegt ihn zur Heimkehr", z: "hoehepunkt", s: "III,2" },
+    { t: "Karl kehrt verkleidet ins Schloss zurück und wird vom alten Diener Daniel erkannt", z: "fallend", s: "IV,2–3" },
+    { t: "Karl findet seinen Vater halb verhungert im Turm und schwört Rache an Franz", z: "fallend", s: "IV,5" },
+    { t: "Amalia erkennt Karl und will trotz allem mit ihm leben – für einen Moment scheint Glück möglich", z: "retardierend", s: "V,2" },
+    { t: "Franz nimmt sich das Leben; der Vater stirbt; Karl tötet Amalia und stellt sich der Justiz", z: "katastrophe", s: "V,1–2" }
+  ];
+  var pyrBox = $("#pyr-zuordnung");
+  if (pyrBox) {
+    var pGew = null;
+    var pLeiste = el("div", { class: "matrix-leiste" });
+    var pPruef = el("button", { type: "button", class: "btn" }, "Prüfen");
+    var pNeu = el("button", { type: "button", class: "btn sekundaer" }, "Neu starten");
+    pLeiste.appendChild(pPruef); pLeiste.appendChild(pNeu);
+    var pStatus = el("p", { class: "matrix-status", "aria-live": "polite" });
+    var pStapel = el("div", { class: "matrix-stapel", role: "group", "aria-label": "Stapel mit Ereigniskärtchen" });
+    var pZonen = el("div", { class: "pyr-zonen" });
+    var pFelder = {};
+    PYR_PHASEN.forEach(function (ph, i) {
+      var z = el("div", { class: "pyr-zone pyr-zone-" + ph.id, style: "--stufe:" + [4, 3, 2, 0, 2, 3, 4][i] });
+      z.appendChild(el("p", { class: "pyr-zone-titel" }, ph.t));
+      var f = el("div", { class: "matrix-feld", tabindex: "0", role: "button", "aria-label": ph.t + " – Kärtchen hier ablegen", "data-zelle": ph.id });
+      z.appendChild(f);
+      pZonen.appendChild(z);
+      pFelder[ph.id] = f;
+      f.addEventListener("click", function () { pAblegen(f); });
+      f.addEventListener("keydown", function (e) { if (e.target === f && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pAblegen(f); } });
+    });
+    pyrBox.appendChild(pLeiste); pyrBox.appendChild(pStatus); pyrBox.appendChild(pStapel); pyrBox.appendChild(pZonen);
+
+    function pWaehle(k) {
+      if (pGew) { pGew.classList.remove("gewaehlt"); pGew.setAttribute("aria-pressed", "false"); }
+      if (!k || k === pGew) { pGew = null; pyrBox.classList.remove("hat-auswahl"); return; }
+      pGew = k; k.classList.add("gewaehlt"); k.setAttribute("aria-pressed", "true"); pyrBox.classList.add("hat-auswahl");
+    }
+    function pAblegen(ziel) {
+      if (!pGew) return;
+      var k = pGew; pWaehle(null);
+      k.classList.remove("richtig", "falsch");
+      var s = $(".pyr-stelle", k); if (s) s.remove();
+      ziel.appendChild(k); pZaehle();
+    }
+    function pZaehle() {
+      var rest = pStapel.querySelectorAll(".matrix-karte").length;
+      pStatus.textContent = rest ? "Noch " + rest + " Kärtchen im Stapel." : "Alle Kärtchen sind verteilt – jetzt „Prüfen“!";
+    }
+    function pAufbauen() {
+      pWaehle(null); pStapel.innerHTML = "";
+      Object.keys(pFelder).forEach(function (z) { pFelder[z].innerHTML = ""; });
+      var k = PYR_KARTEN.slice();
+      for (var i = k.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = k[i]; k[i] = k[j]; k[j] = t; }
+      k.forEach(function (c) {
+        var b = el("button", { type: "button", class: "matrix-karte", "aria-pressed": "false", "data-ziel": c.z, "data-stelle": c.s }, c.t);
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var feld = b.parentNode;
+          if (pGew && pGew !== b && feld.classList.contains("matrix-feld")) { pAblegen(feld); return; }
+          pWaehle(b);
+        });
+        pStapel.appendChild(b);
+      });
+      pZaehle();
+    }
+    pStapel.addEventListener("click", function (e) { if (e.target === pStapel) pAblegen(pStapel); });
+    pPruef.addEventListener("click", function () {
+      var r = 0, f = 0;
+      Object.keys(pFelder).forEach(function (z) {
+        $$(".matrix-karte", pFelder[z]).forEach(function (k) {
+          var ok = k.getAttribute("data-ziel") === z;
+          k.classList.toggle("richtig", ok); k.classList.toggle("falsch", !ok);
+          if (!$(".pyr-stelle", k)) k.appendChild(el("span", { class: "pyr-stelle" }, " (" + k.getAttribute("data-stelle") + ")"));
+          if (ok) r++; else f++;
+        });
+      });
+      var rest = pStapel.querySelectorAll(".matrix-karte").length;
+      pStatus.textContent = r + " richtig, " + f + " falsch" + (rest ? ", " + rest + " noch im Stapel." : ".") +
+        (r === PYR_KARTEN.length ? " Alles richtig – fällt dir auf, wie genau die Akte zu den Phasen passen?" : f ? " Rote Kärtchen antippen und neu ablegen. Tipp: Achte auf Akt und Szene." : "");
+    });
+    pNeu.addEventListener("click", pAufbauen);
+    pAufbauen();
+  }
+
+  /* --- Aufgabe 2: Gegenüberstellung geschlossen / offen --- */
+  var DA_MERKMALE = [
+    { m: "Aufbau", r: "g", e: "Fünf Akte, und der Spannungsbogen folgt der Pyramide (Aufgabe 1)." },
+    { m: "Handlung", r: "o", e: "Zwei Handlungsstränge laufen im Wechsel nebeneinander: Franz im Schloss, Karl bei der Bande. Sie treffen erst ab dem IV. Akt zusammen." },
+    { m: "Ort", r: "o", e: "Viele Schauplätze: Franken (Schloss), eine Schenke an der Grenze zu Sachsen, die böhmischen Wälder, eine Gegend an der Donau." },
+    { m: "Zeit", r: "o", e: "Das Personenverzeichnis nennt als Zeit „ohngefähr zwei Jahre“ – weit entfernt von einem Tag." },
+    { m: "Szenen", r: "g", e: "Die Szenen sind eng verknüpft: Brief → Verstoßung → Bande → Heimkehr → Katastrophe. Keine lässt sich einfach weglassen." },
+    { m: "Figuren", r: "o", e: "Viele Figuren aus allen Schichten: Grafen und Adlige, aber auch Räuber, Diener, ein Pater – gegen die Ständeklausel." },
+    { m: "Sprache", r: "o", e: "Prosa statt Vers, je nach Figur pathetisch (Karl), kalt-zynisch (Franz) oder derb (Räuber)." },
+    { m: "Gewalt", r: "o", e: "Gewalt wird auf offener Bühne gezeigt: Karl tötet Amalia vor den Augen des Publikums (V,2)." },
+    { m: "Schluss", r: "g", e: "Der Schluss ist eindeutig: Franz und der Vater sind tot, Karl tötet Amalia und stellt sich. Die Konflikte sind gelöst." }
+  ];
+  var daBox = $("#da-vergleich");
+  if (daBox) {
+    var daTab = el("div", { class: "da-zeilen" });
+    DA_MERKMALE.forEach(function (d, i) {
+      var z = el("div", { class: "da-zeile", "data-r": d.r });
+      z.innerHTML =
+        "<p class='da-merkmal'>" + d.m + "</p>" +
+        "<div class='da-wahl' role='group' aria-label='" + d.m + ": geschlossen oder offen?'>" +
+          "<button type='button' class='da-btn' data-w='g' aria-pressed='false'>eher geschlossen</button>" +
+          "<button type='button' class='da-btn' data-w='o' aria-pressed='false'>eher offen</button>" +
+        "</div>" +
+        "<textarea class='da-beleg' rows='2' aria-label='Beleg zu " + d.m + "' placeholder='Beleg aus dem Stück …'></textarea>" +
+        "<p class='da-rueck' aria-live='polite'></p>";
+      $$(".da-btn", z).forEach(function (b) {
+        b.addEventListener("click", function () {
+          $$(".da-btn", z).forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+          z.classList.remove("ok", "nein"); $(".da-rueck", z).textContent = "";
+        });
+      });
+      daTab.appendChild(z);
+    });
+    var daLeiste = el("div", { class: "matrix-leiste" });
+    var daAus = el("button", { type: "button", class: "btn" }, "Auswerten");
+    var daNeu = el("button", { type: "button", class: "btn sekundaer" }, "Zurücksetzen");
+    daLeiste.appendChild(daAus); daLeiste.appendChild(daNeu);
+    var daErg = el("div", { class: "da-ergebnis", "aria-live": "polite" });
+    daBox.appendChild(daTab); daBox.appendChild(daLeiste); daBox.appendChild(daErg);
+
+    daAus.addEventListener("click", function () {
+      var offen = 0, beantw = 0, richtig = 0;
+      $$(".da-zeile", daTab).forEach(function (z, i) {
+        var gew = $(".da-btn[aria-pressed='true']", z), d = DA_MERKMALE[i], r = $(".da-rueck", z);
+        if (!gew) { z.classList.remove("ok", "nein"); r.textContent = "Noch nicht entschieden."; return; }
+        beantw++;
+        var ok = gew.getAttribute("data-w") === d.r;
+        if (ok) richtig++;
+        z.classList.toggle("ok", ok); z.classList.toggle("nein", !ok);
+        r.textContent = (ok ? "✓ " : "✗ Eher " + (d.r === "g" ? "geschlossen" : "offen") + ": ") + d.e;
+      });
+      DA_MERKMALE.forEach(function (d) { if (d.r === "o") offen++; });
+      var gesch = DA_MERKMALE.length - offen;
+      daErg.innerHTML = beantw < DA_MERKMALE.length
+        ? "<p>Du hast " + beantw + " von " + DA_MERKMALE.length + " Merkmalen entschieden. Entscheide alle, dann siehst du die Bilanz.</p>"
+        : "<p><strong>" + richtig + " von " + DA_MERKMALE.length + "</strong> Entscheidungen stimmen mit der Musterlösung überein. So sieht die Bilanz der Musterlösung aus:</p>" +
+          "<div class='da-waage' role='img' aria-label='Bilanz: " + gesch + " Merkmale eher geschlossen, " + offen + " eher offen'>" +
+            "<div class='da-waage-g' style='flex:" + gesch + "'>geschlossen · " + gesch + "</div>" +
+            "<div class='da-waage-o' style='flex:" + offen + "'>offen · " + offen + "</div>" +
+          "</div>" +
+          "<p>Was fällt dir an der Bilanz auf? Welche Merkmale sind „geschlossen“ – und was haben sie gemeinsam? Schreibe dein Fazit in Aufgabe 3.</p>";
+    });
+    daNeu.addEventListener("click", function () {
+      $$(".da-zeile", daTab).forEach(function (z) {
+        z.classList.remove("ok", "nein");
+        $$(".da-btn", z).forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        $(".da-beleg", z).value = ""; $(".da-rueck", z).textContent = "";
+      });
+      daErg.innerHTML = "";
+    });
+  }
+
+  /* ======================================================================
      4) CHECKLISTE DIALOGANALYSE (nur im Arbeitsspeicher, kein Speichern)
      ====================================================================== */
   $$(".checkliste").forEach(function (liste) {
